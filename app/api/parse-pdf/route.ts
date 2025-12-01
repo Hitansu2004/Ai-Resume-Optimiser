@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDriveClient, ensureFolders, getNextSequenceNumber, uploadFile } from "@/lib/googleDrive";
+const pdfParse = require("pdf-parse/lib/pdf-parse.js");
 
 export async function POST(req: Request) {
     try {
@@ -38,7 +39,14 @@ export async function POST(req: Request) {
         // --------------------------------
 
         // Use pdf-parse for more reliable text extraction
-        const pdfParse = require("pdf-parse");
+        // Polyfill for DOMMatrix which is missing in some Node environments
+        if (typeof DOMMatrix === 'undefined') {
+            (global as any).DOMMatrix = class DOMMatrix {
+                constructor() { return this; }
+                toString() { return "matrix(1, 0, 0, 1, 0, 0)"; }
+            };
+        }
+
         const data = await pdfParse(buffer);
         const parsedText = data.text;
 
@@ -46,10 +54,13 @@ export async function POST(req: Request) {
             throw new Error("No text content found in PDF");
         }
 
-        return NextResponse.json({ text: parsedText, submissionId });
+        return NextResponse.json({ text: parsedText, submissionId }, {
+            headers: { "X-Parser-Version": "v2-pdf-parse" }
+        });
 
-    } catch (error) {
-        console.error("Error parsing PDF:", error);
-        return NextResponse.json({ error: "Failed to parse PDF" }, { status: 500 });
+    } catch (error: any) {
+        console.error("Error parsing PDF (Full Details):", error);
+        console.error("Stack Trace:", error.stack);
+        return NextResponse.json({ error: `Failed to parse PDF: ${error.message}` }, { status: 500 });
     }
 }

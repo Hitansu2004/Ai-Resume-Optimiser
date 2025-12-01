@@ -41,16 +41,25 @@ export function ResumeForm({ onSubmit, isLoading, onAnalysisComplete }: ResumeFo
             });
 
             if (!response.ok) {
-                throw new Error("Failed to parse PDF");
+                const errText = await response.text();
+                let errorMessage = `Failed to parse PDF (${response.status})`;
+                try {
+                    const errData = JSON.parse(errText);
+                    if (errData.error) errorMessage = errData.error;
+                } catch (e) {
+                    console.error("Non-JSON error response:", errText);
+                }
+                throw new Error(errorMessage);
             }
 
             const data = await response.json();
 
             if (data.text) {
                 setResumeText(data.text);
-                onAnalysisComplete(data.text, data.submissionId); // Pass submissionId
+                onAnalysisComplete(data.text, data.submissionId);
             } else {
-                throw new Error("Failed to parse PDF: No text content found.");
+                console.error("Empty text received:", data);
+                throw new Error("Failed to parse PDF: Server returned empty text.");
             }
         } catch (err) {
             console.error(err);
