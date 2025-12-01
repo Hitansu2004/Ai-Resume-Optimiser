@@ -204,12 +204,22 @@ export async function POST(req: Request) {
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
+      console.error("API Key is missing");
       return NextResponse.json({ error: "API Key not configured" }, { status: 500 });
     }
+    console.log(`[Optimize API] Request received. Type: ${type}, SubmissionId: ${submissionId}`);
+    console.log(`[Optimize API] Resume length: ${resumeText?.length}, JD length: ${jobDescription?.length}`);
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-preview-09-2025" });
+    const modelName = "gemini-2.5-flash";
+    console.log(`[Optimize API] Using model: ${modelName}`);
 
+    const model = genAI.getGenerativeModel({
+      model: modelName,
+      generationConfig: {
+        responseMimeType: "application/json",
+      }
+    });
     let prompt;
     if (type === 'boost') {
       prompt = BOOST_SYSTEM_PROMPT
@@ -224,9 +234,12 @@ export async function POST(req: Request) {
         .replace("{{PASTE_JOB_DESCRIPTION_HERE}}", jobDescription);
     }
 
+    console.log("[Optimize API] Sending prompt to Gemini...");
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
+    console.log("[Optimize API] Received response from Gemini. Length:", text.length);
+    console.log("[Optimize API] Raw Response Preview:", text.substring(0, 200) + "...");
 
     const jsonString = text.replace(/```json\n|\n```/g, "").replace(/```/g, "").trim();
 
@@ -257,7 +270,10 @@ export async function POST(req: Request) {
 
   } catch (error) {
     console.error("Error optimizing resume:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json({
+      error: error instanceof Error ? error.message : "Internal Server Error",
+      details: error instanceof Error ? error.stack : String(error)
+    }, { status: 500 });
   }
 }
 

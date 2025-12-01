@@ -46,8 +46,26 @@ export async function POST(req: Request) {
                 toString() { return "matrix(1, 0, 0, 1, 0, 0)"; }
             };
         }
+        let parseFunc = pdfParse;
+        // Handle different export structures (CommonJS vs ES modules vs library specifics)
+        if (typeof parseFunc !== 'function') {
+            if (parseFunc.default && typeof parseFunc.default === 'function') {
+                parseFunc = parseFunc.default;
+            } else if (parseFunc.PDFParse && typeof parseFunc.PDFParse === 'function') {
+                // Based on logs, it might be a property
+                parseFunc = parseFunc.PDFParse;
+            } else {
+                // Fallback: if it's an object but we can't find the function, try to find *any* function or just log
+                console.error("pdf-parse export structure:", Object.keys(pdfParse));
+                // Attempt to use the main object if it looks like a function but typeof lied (unlikely)
+            }
+        }
 
-        const data = await pdfParse(buffer);
+        if (typeof parseFunc !== 'function') {
+            throw new Error(`pdf-parse is not a function. Type: ${typeof pdfParse}, Keys: ${Object.keys(pdfParse)}`);
+        }
+
+        const data = await parseFunc(buffer);
         const parsedText = data.text;
 
         if (!parsedText || parsedText.trim().length === 0) {

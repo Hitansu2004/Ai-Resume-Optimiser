@@ -30,16 +30,21 @@ export default function Home() {
     localStorage.setItem("jobDescription", jobDescription); // Save JD for boosting
 
     try {
+      console.log(`[Client] Sending optimization request. Resume length: ${resumeText.length}, JD length: ${jobDescription.length}`);
       const response = await fetch("/api/optimize", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ resumeText, jobDescription, type: "optimize", submissionId }), // Pass submissionId
+        body: JSON.stringify({ resumeText, jobDescription, type: "optimize", submissionId }),
       });
 
+      console.log(`[Client] Response received. Status: ${response.status}, StatusText: ${response.statusText}`);
+
       if (!response.ok) {
-        throw new Error("Failed to optimize resume");
+        const errorData = await response.json().catch(() => ({}));
+        console.error("Optimization Server Error:", errorData);
+        throw new Error(errorData.error || "Failed to optimize resume");
       }
 
       const data = await response.json();
