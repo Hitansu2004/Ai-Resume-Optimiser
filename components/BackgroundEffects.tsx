@@ -57,7 +57,6 @@ export function BackgroundEffects() {
                         number: {
                             density: {
                                 enable: true,
-                                area: 800,
                             },
                             value: 30,
                         },
@@ -66,7 +65,6 @@ export function BackgroundEffects() {
                             animation: {
                                 enable: true,
                                 speed: 0.5,
-                                minimumValue: 0.1,
                                 sync: false
                             }
                         },
