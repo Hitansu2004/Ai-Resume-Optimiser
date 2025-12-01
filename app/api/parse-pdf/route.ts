@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import PDFParser from "pdf2json";
 import { getDriveClient, ensureFolders, getNextSequenceNumber, uploadFile } from "@/lib/googleDrive";
 
 export async function POST(req: Request) {
@@ -36,17 +35,16 @@ export async function POST(req: Request) {
         }
         // --------------------------------
 
-        const parser = new PDFParser();
+        // --------------------------------
 
-        const parsedText = await new Promise<string>((resolve, reject) => {
-            parser.on("pdfParser_dataError", (errData: any) => reject(errData.parserError));
-            parser.on("pdfParser_dataReady", (pdfData: any) => {
-                const rawText = parser.getRawTextContent();
-                resolve(rawText);
-            });
+        // Use pdf-parse for more reliable text extraction
+        const pdfParse = require("pdf-parse");
+        const data = await pdfParse(buffer);
+        const parsedText = data.text;
 
-            parser.parseBuffer(buffer);
-        });
+        if (!parsedText || parsedText.trim().length === 0) {
+            throw new Error("No text content found in PDF");
+        }
 
         return NextResponse.json({ text: parsedText, submissionId });
 
