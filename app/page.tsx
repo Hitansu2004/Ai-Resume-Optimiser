@@ -1,65 +1,85 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+import { Navbar } from "@/components/Navbar";
+import { Hero } from "@/components/Hero";
+import { ResumeForm } from "@/components/ResumeForm";
+import { Results } from "@/components/Results";
+
+import { Features } from "@/components/Features";
+
+import { HowItWorks } from "@/components/HowItWorks";
+import { Pricing } from "@/components/Pricing";
+
+import { BackgroundEffects } from "@/components/BackgroundEffects";
 
 export default function Home() {
+  const [results, setResults] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [submissionId, setSubmissionId] = useState<number | null>(null); // New state
+
+  const handleAnalysisComplete = (text: string, id?: number | null) => {
+    // Assuming resumeText state would be managed elsewhere or passed down
+    // setResumeText(text); // This line would require a resumeText state
+    if (id) setSubmissionId(id);
+  };
+
+  const handleOptimize = async (resumeText: string, jobDescription: string) => {
+    setIsLoading(true);
+    setResults(null);
+    localStorage.setItem("jobDescription", jobDescription); // Save JD for boosting
+
+    try {
+      const response = await fetch("/api/optimize", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ resumeText, jobDescription, type: "optimize", submissionId }), // Pass submissionId
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to optimize resume");
+      }
+
+      const data = await response.json();
+      setResults(data);
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Something went wrong. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="min-h-screen bg-background text-foreground selection:bg-primary/30 relative">
+      <BackgroundEffects />
+      <Navbar />
+
+      <div className="flex flex-col items-center pb-24 relative z-10">
+        <Hero />
+
+        <HowItWorks />
+
+        <Features />
+
+        <Pricing />
+
+        <div id="optimize" className="container mx-auto px-4 mt-12 w-full flex justify-center">
+          <ResumeForm
+            onSubmit={handleOptimize}
+            isLoading={isLoading}
+            onAnalysisComplete={handleAnalysisComplete}
+          />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+
+        {results && (
+          <div id="results" className="w-full flex justify-center px-4 pb-24">
+            <Results results={results} onUpdate={setResults} />
+          </div>
+        )}
+      </div>
+    </main>
   );
 }
